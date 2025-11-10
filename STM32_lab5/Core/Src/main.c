@@ -108,14 +108,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
 	  HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
 
-	  HAL_ADC_Start(&hadc1);                    // Start ADC conversion
-//	  HAL_ADC_PollForConversion(&hadc1, 100);   // Wait for it to finish
+	  HAL_ADC_Start(&hadc1);
+	  HAL_ADC_PollForConversion(&hadc1, 100);
 	  ADC_value = HAL_ADC_GetValue(&hadc1);
 	  HAL_UART_Transmit(&huart2, (void*)str, sprintf(str, "%d\n", ADC_value), 1000);
 	  HAL_Delay(500);
+    /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
