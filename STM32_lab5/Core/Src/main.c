@@ -48,8 +48,6 @@ ADC_HandleTypeDef hadc1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-#define MAX_BUFFER_SIZE 30
-#define TIMEOUT_MS 3000
 
 uint8_t temp = 0;
 uint8_t buffer[MAX_BUFFER_SIZE];
