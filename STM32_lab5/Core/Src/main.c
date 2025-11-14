@@ -24,6 +24,9 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include "command_parser_fsm.h"
+#include "uart_comm_fsm.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,8 +36,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define MAX_BUFFER_SIZE 30
-#define TIMEOUT_MS 3000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -50,16 +52,7 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 
 uint8_t temp = 0;
-uint8_t buffer[MAX_BUFFER_SIZE];
-uint8_t index_buffer = 0;
-uint8_t buffer_flag = 0;
 
-uint8_t command_flag = 0;  // 1 = RST, 2 = OK, 0 = none
-uint32_t ADC_value = 0;
-char tx_buffer[30];
-
-uint32_t last_send_time = 0;
-uint8_t waiting_for_ack = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,67 +65,6 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void command_parser_fsm(void) {
-    static uint8_t state = 0;
-    static char cmd[10];
-    static uint8_t cmd_index = 0;
-
-    for (uint8_t i = 0; i < index_buffer; i++) {
-        char c = buffer[i];
-
-        switch (state) {
-            case 0:
-                if (c == '!') {
-                    state = 1;
-                    cmd_index = 0;
-                }
-                break;
-
-            case 1:
-                if (c == '#') {
-                    cmd[cmd_index] = '\0';
-                    if (strcmp(cmd, "RST") == 0) command_flag = 1;
-                    else if (strcmp(cmd, "OK") == 0) command_flag = 2;
-                    state = 0;
-                } else if (cmd_index < sizeof(cmd) - 1) {
-                    cmd[cmd_index++] = c;
-                }
-                break;
-        }
-    }
-    index_buffer = 0;
-}
-
-void uart_communication_fsm(void) {
-    switch (command_flag) {
-        case 1: // !RST#
-            HAL_ADC_Start(&hadc1);
-            HAL_ADC_PollForConversion(&hadc1, 100);
-            ADC_value = HAL_ADC_GetValue(&hadc1);
-            sprintf(tx_buffer, "!ADC=%lu#\r\n", ADC_value);
-            HAL_UART_Transmit(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer), 1000);
-
-            waiting_for_ack = 1;
-            last_send_time = HAL_GetTick();
-            command_flag = 0;
-            break;
-
-        case 2: // !OK#
-            waiting_for_ack = 0;
-            command_flag = 0;
-            HAL_UART_Transmit(&huart2, (uint8_t*)"ACK received\r\n", 13, 100);
-            break;
-    }
-
-    if (waiting_for_ack) {
-        if (HAL_GetTick() - last_send_time > TIMEOUT_MS) {
-            HAL_UART_Transmit(&huart2, (uint8_t*)tx_buffer, strlen(tx_buffer), 1000);
-            last_send_time = HAL_GetTick();
-        }
-    }
-    HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
-   HAL_Delay(1000);
-}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART2) {
